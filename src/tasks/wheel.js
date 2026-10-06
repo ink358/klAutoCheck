@@ -42,7 +42,8 @@ async function rollOnce(cookie, userAgent, lotteryId, hash) {
   const { text } = await fetchText(url, { cookie, userAgent });
 
   if (
-    (text.includes('需要先登录') || text.includes('需要先登錄')) ||
+    text.includes('需要先登录') || text.includes('需要先登錄') ||
+    /<title>[^<]*提示信息/.test(text) ||
     (text.includes('member.php?mod=logging') && !text.includes('action=logout'))
   ) {
     return { kind: 'cookie_expired', message: 'Cookie 已失效，请重新抓取并更新 Secret' };

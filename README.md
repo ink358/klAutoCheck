@@ -149,8 +149,10 @@ node src/index.js --tasks checkin
 
 ## 常见问题
 
-**提示 Cookie 已失效？**
+**提示 Cookie 已失效 / 解析不到用户 UID？**
 其乐的登录态会过期（一般几周到几个月）。重新按上面的步骤抓一次 Cookie，更新 `KL_CONFIG` Secret 即可。通知推送里出现失效提醒时请尽快更换。
+
+自查清单：粘贴进 Secret 的 Cookie 里**必须包含形如 `xxxx_auth=...` 的字段**（这是 Discuz 登录态的核心字段）。如果只有 `saltkey` 没有 `_auth`，说明抓取不完整——请改用 **Network 面板复制整行** 的方法，不要用 Console 里 `document.cookie`（其乐的登录 Cookie 是 HttpOnly，`document.cookie` 拿不到），也不要在 Application 面板里逐条手拼。
 
 **转盘提示条件不满足？**
 转盘需要：进阶会员（2 级）及以上、发帖数（主题+回帖）≥ 50、公开绑定 Steam 账号，每次抽奖消耗 2 蒸汽，每天最多 3 次（北京时间早 8 点重置）。
