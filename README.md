@@ -1,39 +1,39 @@
 # KlAutoCheck
 
-其乐（[keylol.com](https://keylol.com/)）每日任务自动化：**每日签到**、**转盘抽奖（蒸汽消消乐）**，支持**多账号**，任务结果统一推送到 **Telegram / Server酱 / PushPlus / 邮箱**。零依赖，Node.js 直接运行，可在 GitHub Actions 上定时执行，也可以在 Windows / macOS / Linux 本地跑。
+Forum daily task automation: **scheduled check-in** and **lottery wheel** tasks, **multi-account** support, with unified result notifications to **Telegram / ServerChan / PushPlus / Email**. Zero dependencies, plain Node.js — runs on GitHub Actions on a schedule, or locally on Windows / macOS / Linux.
 
-> ⚠️ 免责声明：本项目仅供学习交流，自动化任务属于论坛规则的灰色地带，请只用于自己的账号、不要多开小号，遵守 [其乐社区版规](https://keylol.com/)，珍爱账号。
+> ⚠️ Disclaimer: for learning and personal use only. Task automation may fall outside forum rules — use it only on your own account, never run multiple accounts, and respect the community rules of the forums you participate in.
 
-## 功能
+## Features
 
-| 任务 | 说明 |
+| Task | Description |
 |---|---|
-| `checkin` | 每日签到：访问个人页 → "我的动态" → 随机帖子 → 回访个人页，报告积分变化 |
-| `wheel` | 转盘抽奖：自动抓取 hash 并抽奖（每次消耗 2 蒸汽，每天最多 3 次，需 2 级会员、发帖≥50、公开绑定 Steam） |
+| `checkin` | Daily check-in: visits your profile page → "my posts" feed → a random thread → back to your profile, and reports stat changes (points, stamina, credits) |
+| `wheel` | Lottery wheel: automatically grabs the request hash and rolls (consumes 2 credits per roll, up to 3 per day; requires level-2 membership, 50+ posts, and a publicly linked game account) |
 
-其它特性：
+Other highlights:
 
-- 多账号，每个账号可单独配置执行哪些任务
-- 通知渠道可叠加配置，一次运行所有渠道各收到一条汇总报告
-- 所有日志与报错自动**脱敏**，Cookie / token / 授权码不会出现在输出里
-- 随机延迟 + 请求间隔，模拟真人节奏
-- Cookie 失效时推送明确提醒，方便及时更新
+- Multiple accounts, each with its own task list and options
+- Stackable notification channels — one run, one summary per channel
+- All logs and errors are automatically **redacted**: cookies, tokens and passwords never appear in output
+- Random delays and request spacing to mimic human pacing
+- Clear "cookie expired" notifications so you know when to re-fetch
 
-## 快速开始（GitHub Actions，推荐）
+## Quick Start (GitHub Actions, recommended)
 
-### 1. 创建仓库
+### 1. Create your repository
 
-点击页面右上角 **Use this template**（或 Fork 本仓库）。
+Click **Use this template** (or Fork) at the top right of this page.
 
-### 2. 添加 Secret
+### 2. Add the Secret
 
-仓库 → Settings → Secrets and variables → Actions → New repository secret：
+Repository → Settings → Secrets and variables → Actions → New repository secret:
 
-- Name：`KL_CONFIG`
-- Secret：把下面这段模板填好你的信息后整段粘贴（支持多行）
+- Name: `KL_CONFIG`
+- Secret: fill in the template below and paste the whole thing (multi-line is fine)
 
 ```ini
-# ===== 通知配置（全局，四选一或多选，只配你用的）=====
+# ===== Notification config (global, configure only what you use) =====
 
 [telegram]
 bot_token = 123456789:AAxxxxxxxxxxxxxxxxxxxx
@@ -43,140 +43,138 @@ chat_id = 1008610086
 sendkey = SCT123456XXXXXXXXXXXXXXXX
 
 [pushplus]
-token = 你的pushplus_token
+token = your_pushplus_token
 
 [mail]
 smtp_server = smtp.qq.com
 smtp_port = 465
-user = 你的QQ号@qq.com
-pass = 邮箱授权码
-from = KlAutoCheck <你的QQ号@qq.com>
+user = you@qq.com
+pass = your_smtp_auth_code
+from = KlAutoCheck <you@qq.com>
 mail_to = me@example.com
 
-# ===== 账号（[account] 出现几次就是几个账号）=====
+# ===== Accounts (one [account] block per account) =====
 
 [account]
-name = 主账号
-cookie = 把浏览器里复制的完整Cookie粘到这里
+name = main
+cookie = paste_the_full_cookie_line_here
 tasks = checkin,wheel
 wheel_times = 1
 
 [account]
-name = 小号
-cookie = 另一个账号的Cookie
+name = alt
+cookie = another_accounts_cookie
 tasks = checkin
 ```
 
-规则：
+Rules:
 
-- 键名不区分大小写，`=` 和 `:` 都行，`#` 开头是注释，行尾 `# 注释` 也可以
-- `[account]` 段出现几次就是几个账号，每个账号的 `name / tasks / wheel_times` 可以单独覆盖全局
-- 只有一个账号时可以不写 `[account]` 段，直接 `cookie = xxx`；多个账号没有段时也可以写 `cookies = cookie1 && cookie2`
-- 通知段只配你用的那个就行，其余段整段删掉
+- Keys are case-insensitive; `=` and `:` both work; `#` starts a comment (full-line or inline)
+- One `[account]` block per account; `name / tasks / wheel_times` can be overridden per account
+- With a single account you can skip the `[account]` block and just write `cookie = xxx`; for several accounts without blocks use `cookies = cookie1 && cookie2`
+- Only configure the notification channels you actually use and delete the rest
 
-### 3. 抓取 Cookie
+### 3. Grab your Cookie
 
-1. 用 Chrome/Edge 登录 [keylol.com](https://keylol.com/)
-2. 按 `F12` 打开开发者工具 → **Network（网络）** 标签
-3. 刷新页面，点击第一个 `forum.php` 请求 → **Headers（标头）** → Request Headers
-4. 复制 `cookie:` 后面的**完整一行**（从 Network 面板复制最稳妥，从 Application 面板逐条拼容易漏）
-5. 粘贴到 Secret 里 `cookie = ` 后面
+1. Log in to the forum in Chrome/Edge and make sure your username shows in the top-right corner
+2. Press `F12` → **Network** tab → refresh the page
+3. Click the first `forum.php` request → **Headers** → scroll to **Request Headers**
+4. Copy the **entire line** after `cookie:` (copy from the Network panel — do not rebuild it from the Application panel or `document.cookie`; the login cookies are HttpOnly and would be missed)
+5. Paste it after `cookie = ` in the Secret
 
-> Cookie 里 `;` 分隔符不能丢。折行复制很容易把两条粘成一条，导致登录失败。
+> The `;` separators must survive copying. Line wraps easily glue two entries together. Make sure the line contains a field ending in `_auth` — that is the actual login credential.
 
-### 4. 运行
+### 4. Run
 
-- 定时：仓库自带的 workflow 每天北京时间 08:30 自动运行（可在 `.github/workflows/daily.yml` 里改 cron，注意 Actions 的 cron 是 **UTC 时间**，且实际触发可能有几分钟延迟）
-- 手动：Actions 页面选择 **Daily Check** → Run workflow，可随时手动触发；改完 Secret 后建议先手动跑一次验证
-- GitHub 会在仓库 60 天没有任何活动时自动停用定时任务，届时到 Actions 页面重新启用即可（手动跑一次也算活动）
+- Scheduled: the bundled workflow runs daily at 08:30 (UTC+8); edit the cron in `.github/workflows/daily.yml` if needed (note: Actions cron is **UTC**, and scheduled runs can be delayed by minutes)
+- Manual: Actions → **Daily Check** → Run workflow — always run once manually after changing Secrets
+- GitHub auto-disables scheduled workflows after 60 days without repository activity; re-enable on the Actions page (one manual run counts as activity)
 
-## 本地运行（Windows / macOS / Linux）
+## Local Run (Windows / macOS / Linux)
 
-需要 Node.js ≥ 18，零依赖无需 `npm install`：
+Requires Node.js ≥ 18. No dependencies, no `npm install` needed:
 
 ```bash
-# 方式一：环境变量
+# Option 1: environment variable
 # PowerShell
 $env:KL_CONFIG = Get-Content -Raw config.local.ini; node src/index.js
 # Git Bash / Linux
 KL_CONFIG="$(cat config.local.ini)" node src/index.js
 
-# 方式二：配置文件路径
+# Option 2: config file path
 node src/index.js --config config.local.ini
 
-# 只校验配置格式（不访问其乐、不发通知）
+# Validate config only (no requests, no notifications)
 node src/index.js --dry-run
 
-# 只跑签到
+# Check-in only
 node src/index.js --tasks checkin
 ```
 
-## 通知渠道说明
+## Notification Channels
 
-| 渠道 | 需要的字段 | 获取方式 |
+| Channel | Required fields | How to get |
 |---|---|---|
-| Telegram | `bot_token`、`chat_id` | @BotFather 创建机器人；@userinfobot 查自己的 chat_id |
-| Server酱 | `sendkey` | [sct.ftqq.com](https://sct.ftqq.com/) 登录后获取 SendKey |
-| PushPlus | `token` | [pushplus.plus](https://www.pushplus.plus/) 微信扫码登录后复制 token |
-| 邮箱 | SMTP 相关字段 | QQ 邮箱：设置 → 账户 → 开启 SMTP 服务 → 生成授权码（不是登录密码） |
+| Telegram | `bot_token`, `chat_id` | Create a bot via @BotFather; get your chat_id from @userinfobot |
+| ServerChan | `sendkey` | Log in at sct.ftqq.com and copy the SendKey |
+| PushPlus | `token` | Log in at pushplus.plus (WeChat scan) and copy the token |
+| Email | SMTP fields | For QQ Mail: Settings → Account → enable SMTP → generate an auth code (not your login password) |
 
-### 也支持拆分式 Secrets（可选）
+### Split Secrets (optional)
 
-不想把所有东西放一个 Secret，可以改用：
+Prefer separate secrets? Use these instead of (or mixed with) `KL_CONFIG`:
 
-| Secret | 说明 |
+| Secret | Description |
 |---|---|
-| `KL_COOKIES` | 多账号，一行一个 Cookie，行尾可用 `\|` 追加：`cookie \| 备注 \| tasks \| wheel_times` |
-| `KL_COOKIE` | 单账号 Cookie |
+| `KL_COOKIES` | One cookie per line; append extras with `\|`: `cookie \| name \| tasks \| wheel_times` |
+| `KL_COOKIE` | Single account cookie |
 | `TG_BOT_TOKEN` / `TG_CHAT_ID` | Telegram |
-| `SCT_SENDKEY` | Server酱 |
+| `SCT_SENDKEY` | ServerChan |
 | `PUSHPLUS_TOKEN` | PushPlus |
-| `MAIL_USER` / `MAIL_PASS` / `MAIL_TO` / `MAIL_FROM` / `SMTP_SERVER` / `SMTP_PORT` | 邮箱 |
+| `MAIL_USER` / `MAIL_PASS` / `MAIL_TO` / `MAIL_FROM` / `SMTP_SERVER` / `SMTP_PORT` | Email |
 
-两种方式混用也可以，账号会合并、通知凭据互补。
+Both modes can be mixed: accounts are merged and notification credentials complement each other.
 
-## 账号字段参考
+## Account Fields Reference
 
-| 字段 | 位置 | 说明 |
+| Field | Scope | Description |
 |---|---|---|
-| `cookie` | 账号 | 必填，浏览器抓取的完整 Cookie |
-| `name` | 账号 | 账号备注，出现在报告里，便于区分 |
-| `tasks` | 全局 / 账号 | `checkin,wheel`，要执行的任务 |
-| `wheel_times` | 全局 / 账号 | 转盘次数 1~3，默认 1（每次消耗 2 蒸汽） |
-| `lottery_id` | 全局 / 账号 | 转盘活动 ID，默认 46（蒸汽消消乐），活动换了可改 |
-| `user_agent` / `ua` | 全局 | 请求 UA，默认 Windows Chrome；用手机登录抓的 Cookie 就改成手机 UA |
-| `user_page` | 账号 | 个人页地址（如 `https://keylol.com/suid-xxxxx`），一般不用填，脚本会自动解析 |
+| `cookie` | account | Required, full cookie line copied from the browser |
+| `name` | account | Label shown in reports |
+| `tasks` | global / account | `checkin,wheel` |
+| `wheel_times` | global / account | Rolls per day, 1–3, default 1 (consumes 2 credits each) |
+| `lottery_id` | global / account | Lottery activity id, default 46; update it when the activity changes |
+| `user_agent` / `ua` | global | Request UA, defaults to Windows Chrome; change it if you grabbed the cookie from a mobile browser |
+| `user_page` | account | Profile URL (e.g. short link with your numeric id) — usually auto-detected, no need to set |
 
-## 常见问题
+## FAQ
 
-**提示 Cookie 已失效 / 解析不到用户 UID？**
-其乐的登录态会过期（一般几周到几个月）。重新按上面的步骤抓一次 Cookie，更新 `KL_CONFIG` Secret 即可。通知推送里出现失效提醒时请尽快更换。
+**"Cookie invalid / expired" notification?**
+Forum login sessions expire after weeks to months. Re-grab the cookie and update the `KL_CONFIG` Secret. Checklist: the pasted cookie **must contain a field ending in `_auth`**; copy the whole line from the **Network panel** (not `document.cookie` — login cookies are HttpOnly; not the Application panel — easy to miss HttpOnly entries); do not log out in that browser afterwards, it invalidates the session.
 
-自查清单：粘贴进 Secret 的 Cookie 里**必须包含形如 `xxxx_auth=...` 的字段**（这是 Discuz 登录态的核心字段）。如果只有 `saltkey` 没有 `_auth`，说明抓取不完整——请改用 **Network 面板复制整行** 的方法，不要用 Console 里 `document.cookie`（其乐的登录 Cookie 是 HttpOnly，`document.cookie` 拿不到），也不要在 Application 面板里逐条手拼。
+**Wheel says requirements not met?**
+The wheel requires: level-2 membership or above, 50+ posts (threads + replies), a publicly linked game account, and consumes 2 credits per roll. Up to 3 rolls per day, reset at 08:00 (UTC+8).
 
-**转盘提示条件不满足？**
-转盘需要：进阶会员（2 级）及以上、发帖数（主题+回帖）≥ 50、公开绑定 Steam 账号，每次抽奖消耗 2 蒸汽，每天最多 3 次（北京时间早 8 点重置）。
+**Will error messages leak my cookie?**
+No. Every output passes a central redactor: registered cookies, tokens and passwords are shown as `***` in logs, errors and notifications. The one thing to avoid yourself: never paste Secret contents into screenshots or Issues.
 
-**报错信息里会不会泄露我的 Cookie？**
-不会。所有输出经过统一脱敏：配置里注册过的 Cookie、token、授权码在日志、报错、推送中一律显示为 `***`。唯一要你自己注意的是**别把 Secret 的内容截图或粘贴到 Issue 里**。
+**Scheduled runs are late?**
+GitHub Actions schedules can jitter by minutes up to half an hour — normal. The script also adds internal random delays, so it never fires exactly on the hour.
 
-**Actions 定时任务不准点？**
-GitHub Actions 的 schedule 本身有几分钟到半小时的抖动，属正常现象。脚本内部还有随机延迟，不会整点准时请求。
-
-## 目录结构
+## Project Layout
 
 ```
 ├── src/
-│   ├── index.js           # 入口：加载配置 → 执行任务 → 汇总 → 通知
-│   ├── config.js          # INI 配置解析（KL_CONFIG / KL_COOKIES 双模式）
-│   ├── redact.js          # 全局脱敏器
-│   ├── http.js            # 请求封装（UA / Cookie / 超时 / 随机延迟）
+│   ├── index.js           # entry: load config → run tasks → summarize → notify
+│   ├── config.js          # INI config parsing (KL_CONFIG / split-secrets modes)
+│   ├── redact.js          # global redactor
+│   ├── http.js            # request wrapper (UA / cookie / timeout / random delay)
 │   ├── tasks/
-│   │   ├── checkin.js     # 每日签到
-│   │   └── wheel.js       # 转盘抽奖
+│   │   ├── checkin.js     # daily check-in
+│   │   └── wheel.js       # lottery wheel
 │   └── notify/
-│       ├── index.js       # 通知统一出口
-│       └── smtp.js        # 零依赖 SMTP 客户端（SSL / STARTTLS）
+│       ├── index.js       # notification dispatcher
+│       └── smtp.js        # zero-dependency SMTP client (SSL / STARTTLS)
 ├── .github/workflows/daily.yml
 └── config.example.ini
 ```
