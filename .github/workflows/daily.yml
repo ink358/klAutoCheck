@@ -1,0 +1,25 @@
+name: Daily Check
+
+on:
+  schedule:
+    - cron: '30 0 * * *'   # UTC 时间，即北京时间每天 08:30
+  workflow_dispatch:        # 支持在 Actions 页面手动触发
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run tasks
+        env:
+          KL_CONFIG: ${{ secrets.KL_CONFIG }}
+        run: node src/index.js
