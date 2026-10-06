@@ -1,7 +1,7 @@
 {
   "name": "klautocheck",
   "version": "1.0.0",
-  "description": "Keylol (keylol.com) daily task automation: check-in, lottery wheel, multi-account, with Telegram/ServerChan/PushPlus/Email notifications. Runs on GitHub Actions or locally.",
+  "description": "Forum daily task automation: scheduled check-in and lottery tasks, multi-account, multi-channel notifications (Telegram/ServerChan/PushPlus/Email). Zero-dependency Node.js, runs on GitHub Actions or locally.",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
