@@ -48,6 +48,9 @@ async function rollOnce(cookie, userAgent, lotteryId, hash) {
   ) {
     return { kind: 'cookie_expired', message: 'Cookie 已失效，请重新抓取并更新 Secret' };
   }
+  if (text.includes('部分奖品耗尽') || text.includes('無法參加') || text.includes('无法参加')) {
+    return { kind: 'not_eligible', message: '转盘暂不可参加（' + (text.match(/部分奖品耗尽[，,]?[^<"']*/) || ['奖品耗尽'])[0].trim() + '）' };
+  }
   if (text.includes('不可参加') || text.includes('不可參加')) {
     return {
       kind: 'not_eligible',

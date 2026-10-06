@@ -11,21 +11,27 @@ const { redact } = require('../redact');
 const BASE = 'https://keylol.com';
 
 function extractUsername(html) {
-  // 个人页 <h2 class="mbn">用户名</h2>
+  // 个人页 <h2 class="mbn">用户名(UID: 12345)</h2>，去掉 UID 后缀
   const m = html.match(/<h2[^>]*class="mbn"[^>]*>([\s\S]*?)<\/h2>/);
-  if (m) return m[1].replace(/<[^>]+>/g, '').trim();
+  if (m) return m[1].replace(/<[^>]+>/g, '').replace(/\(UID:\s*\d+\)/i, '').trim();
   return '';
 }
 
-function extractCredit(html) {
-  // Discuz 个人页积分格式：<em>12345</em> 积分（蒸汽同理）
-  const results = {};
-  for (const name of ['积分', '蒸汽']) {
-    const re = new RegExp(`<em[^>]*>([\\d,\\s]+)</em>\\s*(?:<a[^>]*>)?\\s*${name}`);
-    const m = html.match(re);
-    if (m) results[name] = parseInt(m[1].replace(/[, ]/g, ''), 10);
+function extractStats(html) {
+  // 其乐个人页"统计信息"：<li><em>积分</em>14</li><li><em>体力</em>14 点</li><li><em>蒸汽</em>5 克</li>
+  const stats = {};
+  const re = /<em[^>]*>(积分|体力|蒸汽|动力|绿意)<\/em>\s*([\d,]+)/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    stats[m[1]] = parseInt(m[2].replace(/,/g, ''), 10);
   }
-  return results;
+  return stats;
+}
+
+/** Discuz 页面内嵌的当前登录用户 UID，最可靠 */
+function extractOwnUid(html) {
+  const m = html.match(/discuz_uid\s*=\s*'?(\d+)'?/);
+  return m ? m[1] : null;
 }
 
 function extractTitle(html) {
@@ -52,12 +58,8 @@ async function getOwnUid(cookie, userAgent, log) {
     err.code = 'COOKIE_EXPIRED';
     throw err;
   }
-  // 兼容三种 Discuz 空间链接格式
-  const m =
-    text.match(/space-uid-(\d+)/) ||
-    text.match(/mod=space&uid=(\d+)/) ||
-    text.match(/suid-(\d{2,})/);
-  return m ? m[1] : null;
+  // 首选页面内嵌的 discuz_uid 变量；其乐的链接均为 suid- 格式
+  return extractOwnUid(text);
 }
 
 async function visitProfile(cookie, userAgent, url, log) {
@@ -68,16 +70,16 @@ async function visitProfile(cookie, userAgent, url, log) {
     err.code = 'COOKIE_EXPIRED';
     throw err;
   }
-  return { username: extractUsername(text), credit: extractCredit(text) };
+  return { username: extractUsername(text), stats: extractStats(text) };
 }
 
 async function run(account, ctx) {
   const { cookie, userPage } = account;
   const { userAgent, log } = ctx;
-  const result = { task: 'checkin', ok: false, steps: [], creditBefore: null, creditAfter: null, username: '' };
+  const result = { task: 'checkin', ok: false, steps: [], statsBefore: null, statsAfter: null, username: '' };
 
   try {
-    // 确定个人页地址
+    // 确定个人页地址：其乐的个人页短链是 suid-<uid>
     let profileUrl = userPage;
     if (!profileUrl) {
       const uid = await getOwnUid(cookie, userAgent, log);
@@ -85,13 +87,13 @@ async function run(account, ctx) {
         result.error = '无法从"我的"页面解析用户 UID，请确认 Cookie 有效（可查看上方页面标题日志判断登录状态）';
         return result;
       }
-      profileUrl = `${BASE}/space-uid-${uid}.html`;
+      profileUrl = `${BASE}/suid-${uid}`;
     }
     result.steps.push(`个人页 ${redact(profileUrl)}`);
 
     const before = await visitProfile(cookie, userAgent, profileUrl, log);
     result.username = before.username || account.name;
-    result.creditBefore = before.credit;
+    result.statsBefore = before.stats;
 
     await sleep(2000 + Math.random() * 3000);
 
@@ -107,7 +109,8 @@ async function run(account, ctx) {
     await sleep(2000 + Math.random() * 3000);
 
     const after = await visitProfile(cookie, userAgent, profileUrl, log);
-    result.creditAfter = after.credit;
+    result.statsAfter = after.stats;
+    if (!result.username) result.username = after.username;
     result.steps.push('回访个人页 ✔');
     result.ok = true;
 
@@ -118,4 +121,4 @@ async function run(account, ctx) {
   return result;
 }
 
-module.exports = { run, extractCredit };
+module.exports = { run, extractStats };

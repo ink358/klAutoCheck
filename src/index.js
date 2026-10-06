@@ -58,6 +58,19 @@ function validate(config) {
   return { problems, channels };
 }
 
+function formatStatsDiff(before, after) {
+  if (!after || Object.keys(after).length === 0) return '';
+  const parts = [];
+  for (const [name, val] of Object.entries(after)) {
+    if (before && before[name] != null && before[name] !== val) {
+      parts.push(`${name} ${before[name]}→${val}`);
+    } else {
+      parts.push(`${name} ${val}`);
+    }
+  }
+  return parts.join('，');
+}
+
 function formatResults(results) {
   const lines = [];
   for (const r of results) {
@@ -69,11 +82,8 @@ function formatResults(results) {
     for (const t of r.results) {
       if (t.task === 'checkin') {
         if (t.ok) {
-          const cb = t.creditBefore && (t.creditBefore['积分'] ?? t.creditBefore['蒸汽']);
-          const ca = t.creditAfter && (t.creditAfter['积分'] ?? t.creditAfter['蒸汽']);
-          const creditTxt =
-            cb != null && ca != null ? `积分 ${cb} -> ${ca}` : cb != null ? `当前积分 ${cb}` : '';
-          lines.push(`${title} 签到 ✔  ${t.username ? t.username + ' ' : ''}${creditTxt}`);
+          const diff = formatStatsDiff(t.statsBefore, t.statsAfter);
+          lines.push(`${title} 签到 ✔  ${t.username ? t.username + ' ' : ''}${diff}`);
         } else {
           lines.push(`${title} 签到 ✘  ${t.error || '未知错误'}`);
         }
